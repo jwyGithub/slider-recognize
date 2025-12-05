@@ -1,0 +1,81 @@
+# 滑块验证码距离计算服务 Docker Compose 配置
+#
+# 使用方式:
+#   # 使用预构建镜像启动 (推荐)
+#   docker compose up -d
+#
+#   # 本地构建并启动
+#   docker compose up -d --build
+#
+#   # 查看日志
+#   docker compose logs -f
+#
+#   # 停止服务
+#   docker compose down
+
+services:
+  slider-recognize:
+    # 使用 GitHub Container Registry 镜像
+    # 本地构建时注释此行，取消下方 build 配置的注释
+    image: ghcr.io/jiangweiye/slider-recognize:latest
+    
+    # 本地构建配置 (如需本地构建，取消注释并注释上方 image)
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    
+    container_name: slider-recognize
+    restart: unless-stopped
+    
+    # 端口映射
+    ports:
+      - "8000:8000"
+    
+    # 环境变量
+    environment:
+      # 服务器配置
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+      - SERVER_DEBUG=false
+      - SERVER_WORKERS=1
+      
+      # 日志配置
+      - LOG_LEVEL=INFO
+      - LOG_FILE_OUTPUT=false
+      
+      # 图片处理配置 (可选)
+      # - IMAGE_DEFAULT_BIG_WIDTH=340
+      # - IMAGE_DEFAULT_SMALL_WIDTH=68
+      # - IMAGE_DOWNLOAD_TIMEOUT=10
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # 日志配置
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# 网络配置 (可选)
+# networks:
+#   default:
+#     name: slider-recognize-network
+#     driver: bridge
+

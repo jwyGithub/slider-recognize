@@ -1,0 +1,75 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+.eggs
+*.egg
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+.tox
+.nox
+
+# 虚拟环境
+venv
+.venv
+env
+.env
+ENV
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# 构建产物
+build
+dist
+*.whl
+
+# 日志
+logs
+*.log
+
+# 临时文件
+tmp
+temp
+*.tmp
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.docker
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# 文档
+docs
+*.md
+!README.md
+
+# 测试
+tests
+test
+*_test.py
+test_*.py
+
+# 其他
+.DS_Store
+Thumbs.db
+*.bak
+

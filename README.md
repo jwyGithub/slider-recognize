@@ -103,15 +103,20 @@ GET /
     "code": 200,
     "data": {
         "service": "滑块验证码距离计算服务",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "endpoints": [
             {
-                "path": "/api/calc",
+                "path": "/api/slider/calc",
                 "method": "POST",
                 "description": "计算滑块距离（支持 URL 和 Base64）"
             }
         ],
-        "features": ["支持 URL 格式图片输入", "支持 Base64 格式图片输入", "支持 OCR 和 OpenCV 两种计算方法"]
+        "features": [
+            "支持 URL 格式图片输入",
+            "支持 Base64 格式图片输入",
+            "支持 OCR 和 OpenCV 两种计算方法",
+            "支持图片尺寸自适应缩放"
+        ]
     },
     "description": "服务运行正常"
 }
@@ -120,7 +125,7 @@ GET /
 ### 2. 计算滑块距离
 
 ```http
-POST /api/calc
+POST /api/slider/calc
 ```
 
 **请求参数**：
@@ -170,10 +175,29 @@ POST /api/calc
 }
 ```
 
-### 3. 健康检查
+### 3. 获取推荐尺寸
 
 ```http
-GET /health
+GET /api/slider/recommended-sizes
+```
+
+**响应示例**：
+
+```json
+{
+    "code": 200,
+    "data": {
+        "big_image_width": 340,
+        "small_image_width": 68
+    },
+    "description": "获取推荐尺寸成功"
+}
+```
+
+### 4. 健康检查
+
+```http
+GET /api/health
 ```
 
 **响应示例**：
@@ -196,7 +220,7 @@ GET /health
 import requests
 
 # API 端点
-url = "http://127.0.0.1:8000/api/calc"
+url = "http://127.0.0.1:8000/api/slider/calc"
 
 # 请求数据（使用 URL 格式）
 payload = {
@@ -218,7 +242,7 @@ print(f"滑块距离: {result['data']} 像素")
 ### cURL 调用示例
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/api/calc" \
+curl -X POST "http://127.0.0.1:8000/api/slider/calc" \
   -H "Content-Type: application/json" \
   -d '{
     "background_url": "https://example.com/background.jpg",
@@ -234,7 +258,7 @@ curl -X POST "http://127.0.0.1:8000/api/calc" \
 
 ```javascript
 // 使用 Fetch API
-fetch('http://127.0.0.1:8000/api/calc', {
+fetch('http://127.0.0.1:8000/api/slider/calc', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json'
@@ -302,19 +326,73 @@ fetch('http://127.0.0.1:8000/api/calc', {
 
 ```
 slider-recognize/
-├── main.py                 # FastAPI 服务主程序
-├── pyproject.toml          # 项目配置和依赖
-├── uv.lock                 # 依赖锁定文件
-├── README.md               # 项目文档
-├── LICENSE                 # 许可证
-├── .python-version         # Python 版本
-├── .gitignore              # Git 忽略配置
-└── src/                    # 源代码目录
-    ├── __init__.py         # 包初始化
-    ├── core.py             # 核心算法（OCR & OpenCV）
-    ├── image.py            # 图片处理工具
-    └── utils.py            # 工具函数
+├── main.py                     # 服务启动入口
+├── pyproject.toml              # 项目配置和依赖
+├── uv.lock                     # 依赖锁定文件
+├── README.md                   # 项目文档
+├── LICENSE                     # 许可证
+├── .python-version             # Python 版本
+├── .gitignore                  # Git 忽略配置
+└── src/                        # 源代码目录
+    ├── __init__.py             # 包初始化和版本信息
+    ├── app.py                  # FastAPI 应用工厂
+    │
+    ├── api/                    # HTTP API 模块
+    │   ├── __init__.py
+    │   ├── deps.py             # 依赖注入
+    │   ├── router.py           # 路由注册
+    │   └── routes/             # 路由定义
+    │       ├── __init__.py
+    │       ├── health.py       # 健康检查路由
+    │       └── slider.py       # 滑块识别路由
+    │
+    ├── config/                 # 配置管理模块
+    │   ├── __init__.py
+    │   └── settings.py         # 配置定义
+    │
+    ├── core/                   # 核心算法模块
+    │   ├── __init__.py
+    │   ├── ocr.py              # OCR 识别算法
+    │   └── opencv.py           # OpenCV 识别算法
+    │
+    ├── exceptions/             # 异常处理模块
+    │   ├── __init__.py
+    │   ├── base.py             # 异常基类定义
+    │   └── handlers.py         # 全局异常处理器
+    │
+    ├── logger/                 # 日志管理模块
+    │   ├── __init__.py
+    │   └── setup.py            # 日志配置
+    │
+    ├── schemas/                # 数据模型模块
+    │   ├── __init__.py
+    │   ├── request.py          # 请求模型
+    │   └── response.py         # 响应模型
+    │
+    ├── services/               # 业务服务模块
+    │   ├── __init__.py
+    │   └── slider.py           # 滑块识别服务
+    │
+    └── utils/                  # 工具函数模块
+        ├── __init__.py
+        ├── image.py            # 图片处理工具
+        └── validators.py       # 数据验证工具
 ```
+
+## 🌐 环境变量
+
+| 变量名                    | 说明               | 默认值      |
+| ------------------------- | ------------------ | ----------- |
+| SERVER_HOST               | 服务器主机地址     | 0.0.0.0     |
+| SERVER_PORT               | 服务器端口         | 8000        |
+| SERVER_DEBUG              | 调试模式           | false       |
+| SERVER_WORKERS            | 工作进程数         | 1           |
+| LOG_LEVEL                 | 日志级别           | INFO        |
+| LOG_FILE_OUTPUT           | 是否输出到文件     | false       |
+| LOG_FILE_PATH             | 日志文件路径       | logs/app.log|
+| IMAGE_DOWNLOAD_TIMEOUT    | 图片下载超时（秒） | 10          |
+| IMAGE_DEFAULT_BIG_WIDTH   | 默认背景图宽度     | None        |
+| IMAGE_DEFAULT_SMALL_WIDTH | 默认滑块图宽度     | None        |
 
 ## 🔧 开发指南
 
@@ -324,11 +402,23 @@ slider-recognize/
 # 安装开发依赖
 uv sync
 
-# 运行服务（开发模式）
-uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# 运行服务（开发模式，支持热重载）
+uv run uvicorn src.app:app --reload --host 0.0.0.0 --port 8000
+
+# 或使用 main.py 启动
+uv run python main.py
 
 # 访问 API 文档
 open http://127.0.0.1:8000/docs
+```
+
+### 调试模式
+
+```bash
+# 启用调试模式
+export SERVER_DEBUG=true
+export LOG_LEVEL=DEBUG
+uv run python main.py
 ```
 
 ### 运行测试

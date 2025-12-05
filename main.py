@@ -1,157 +1,123 @@
+#!/usr/bin/env python3
+"""
+滑块验证码距离计算服务 - 主入口
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-import uvicorn
-import tempfile
-import os
-from typing import Optional
+提供服务启动和命令行入口点。
 
-from src.core import get_dis_x_ocr, get_dis_x_opencv
-from src.image import get_image_content
+使用方式:
+    # 直接运行
+    python main.py
+    
+    # 使用 uv 运行
+    uv run python main.py
+    
+    # 使用 uvicorn 运行（支持热重载）
+    uvicorn src.app:app --reload --host 0.0.0.0 --port 8000
 
-app = FastAPI(title="滑块验证码距离计算服务")
+环境变量:
+    SERVER_HOST: 服务器主机地址，默认 0.0.0.0
+    SERVER_PORT: 服务器端口，默认 8000
+    SERVER_DEBUG: 调试模式，默认 false
+    LOG_LEVEL: 日志级别，默认 INFO
+    LOG_FILE_OUTPUT: 是否输出到文件，默认 false
+"""
 
-# 请求模型
-class SliderRequest(BaseModel):
-    background_url: str  # 支持 URL 或 base64 格式
-    slider_url: str      # 支持 URL 或 base64 格式
-    method: Optional[str] = "ocr"  # 可选: "ocr" 或 "opencv"
-    offset: Optional[int] = 0  # 偏移量，默认为 0
-    big_image_width: Optional[int] = None  # 背景图缩放宽度，None表示不缩放
-    small_image_width: Optional[int] = None  # 滑块图缩放宽度，None表示不缩放
-
-# 响应模型
-def create_response(code: int, data=None, description: str = "", msg=None, show_time: int = 2000, valid: bool = True):
-    """创建标准响应格式"""
-    return {
-        "code": code,
-        "data": data,
-        "description": description,
-        "msg": msg,
-        "showTime": show_time,
-        "valid": valid
-    }
-
-@app.get("/")
-async def root():
-    """根路径，返回API信息"""
-    return create_response(
-        code=200,
-        data={
-            "service": "滑块验证码距离计算服务",
-            "version": "1.1.0",
-            "endpoints": [
-                {"path": "/api/calc", "method": "POST", "description": "计算滑块距离（支持 URL 和 Base64）"}
-            ],
-            "features": [
-                "支持 URL 格式图片输入",
-                "支持 Base64 格式图片输入",
-                "支持 OCR 和 OpenCV 两种计算方法"
-            ]
-        },
-        description="服务运行正常"
-    )
+import sys
 
 
-@app.post("/api/calc")
-async def calculate_distance(request: SliderRequest):
+def main() -> None:
     """
-    计算滑块验证码的距离
+    服务启动入口
     
-    参数:
-        background_url: 背景图片（支持 URL 或 base64 格式）
-        slider_url: 滑块图片（支持 URL 或 base64 格式）
-        method: 计算方法，可选 "ocr" 或 "opencv"，默认 "ocr"
-        offset: 偏移量，计算结果会减去此值，默认 0
-        big_image_width: 背景图缩放宽度（像素），None表示不缩放
-        small_image_width: 滑块图缩放宽度（像素），None表示不缩放
+    初始化并启动 HTTP 服务器。
     
-    支持的格式:
-        - URL: http://example.com/image.jpg
-        - Base64: data:image/png;base64,iVBORw0KGgo...
-        - Base64 (纯文本): iVBORw0KGgo...
+    处理流程:
+        1. 初始化日志系统
+        2. 设置信号处理器
+        3. 创建应用实例
+        4. 启动 uvicorn 服务器
     
-    优化建议:
-        - 如果识别率低，尝试调整图片尺寸
-        - 推荐 big_image_width=340, small_image_width=68
-        - 或根据实际验证码调整比例
+    异常处理:
+        - KeyboardInterrupt: 用户中断（Ctrl+C）
+        - SystemExit: 系统退出信号
+        - Exception: 其他未处理异常
     """
+    import uvicorn
+    
+    from src.config import settings
+    from src.exceptions.handlers import setup_signal_handlers
+    from src.logger import setup_logging, get_logger
+    
+    # 初始化日志系统
+    setup_logging()
+    logger = get_logger(__name__)
+    
+    # 设置信号处理器（优雅退出）
+    setup_signal_handlers(cleanup_callback=_cleanup_on_exit)
+    
     try:
-        if request.method == "opencv":
-            # 获取图片内容
-            bg_content = get_image_content(request.background_url)
-            slider_content = get_image_content(request.slider_url)
-            
-            # 保存到临时文件
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as bg_temp:
-                bg_temp.write(bg_content)
-                bg_path = bg_temp.name
-            
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as slider_temp:
-                slider_temp.write(slider_content)
-                slider_path = slider_temp.name
-            
-            try:
-                result = get_dis_x_opencv(bg_path, slider_path)
-            finally:
-                # 清理临时文件
-                os.unlink(bg_path)
-                os.unlink(slider_path)
-        else:
-            # 默认使用OCR方法（优化版）
-            result = get_dis_x_ocr(
-                request.background_url, 
-                request.slider_url,
-                big_width=request.big_image_width,
-                small_width=request.small_image_width,
-                simple_target=True  # 使用 simple_target=True 提高识别率
-            )
+        logger.info("=" * 60)
+        logger.info(f"启动 {settings.app.name}")
+        logger.info(f"版本: {settings.app.version}")
+        logger.info("=" * 60)
         
-        print(f"result: {result}")
-        print(f"request.offset: {request.offset}")
-        # 减去偏移量并转换为字符串
-        final_result = str(result - request.offset)
+        # 启动服务器
+        uvicorn.run(
+            # 使用应用工厂模块中的 app 实例
+            "src.app:app",
+            host=settings.server.host,
+            port=settings.server.port,
+            reload=settings.server.debug,
+            workers=settings.server.workers if not settings.server.debug else 1,
+            # 日志配置（使用自定义日志系统）
+            log_level="warning",  # 降低 uvicorn 日志级别，使用自定义日志
+            access_log=settings.server.debug,
+        )
         
-        return create_response(
-            code=200,
-            data=final_result,
-            description="计算成功"
-        )
-    
-    except ValueError as e:
-        return create_response(
-            code=400,
-            data=None,
-            description=f"参数错误: {str(e)}",
-            valid=False
-        )
+    except KeyboardInterrupt:
+        logger.info("收到键盘中断信号，正在退出...")
+        sys.exit(0)
+        
+    except SystemExit as e:
+        logger.info(f"收到系统退出信号: {e.code}")
+        sys.exit(e.code)
+        
     except Exception as e:
-        return create_response(
-            code=500,
-            data=None,
-            description=f"计算失败: {str(e)}",
-            valid=False
-        )
-
-@app.get("/health")
-async def health_check():
-    """健康检查接口"""
-    return create_response(
-        code=200,
-        data={"status": "healthy"},
-        description="服务正常运行"
-    )
+        logger.critical(f"服务启动失败: {e}", exc_info=True)
+        sys.exit(1)
 
 
-def main():
-    """启动HTTP服务"""
-    print("启动滑块验证码距离计算服务...")
-    print("API文档: http://127.0.0.1:8000/docs")
-    print("服务地址: http://127.0.0.1:8000")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+def _cleanup_on_exit() -> None:
+    """
+    退出时的清理回调
+    
+    在应用退出前执行必要的清理操作。
+    """
+    from src.logger import get_logger
+    logger = get_logger(__name__)
+    
+    logger.info("执行退出清理...")
+    
+    # 清理临时文件
+    try:
+        import glob
+        import os
+        import tempfile
+        
+        temp_dir = tempfile.gettempdir()
+        patterns = ["tmp*.jpg", "tmp*.png", "tmp*.jpeg"]
+        
+        for pattern in patterns:
+            for file_path in glob.glob(os.path.join(temp_dir, pattern)):
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.warning(f"清理临时文件时发生错误: {e}")
+    
+    logger.info("清理完成")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
