@@ -1,10 +1,11 @@
 # 滑块验证码距离计算服务 Docker 镜像
-# 基于 Python 3.13 + OpenCV + ddddocr
+# 基于 Python 3.12 + OpenCV + ddddocr
+# 注意: ddddocr 不支持 Python 3.13，必须使用 3.12
 
 # ============================
 # 构建阶段
 # ============================
-FROM python:3.13-slim AS builder
+FROM python:3.12-slim AS builder
 
 # 设置环境变量
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -38,7 +39,7 @@ RUN pip install --upgrade pip && \
 # ============================
 # 运行阶段
 # ============================
-FROM python:3.13-slim AS runtime
+FROM python:3.12-slim AS runtime
 
 # 设置环境变量
 ENV PYTHONDONTWRITEBYTECODE=1 \
