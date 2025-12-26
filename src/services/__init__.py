@@ -5,6 +5,7 @@
 """
 
 from src.services.slider import SliderService
+from src.services.arithmetic import ArithmeticService
 
-__all__ = ["SliderService"]
+__all__ = ["SliderService", "ArithmeticService"]
 

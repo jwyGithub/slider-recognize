@@ -6,7 +6,7 @@ API 路由注册
 
 from fastapi import APIRouter
 
-from src.api.routes import health, slider
+from src.api.routes import health, slider, arithmetic
 
 
 # 创建主 API 路由
@@ -22,5 +22,11 @@ api_router.include_router(
     slider.router,
     prefix="/slider",
     tags=["滑块识别"],
+)
+
+api_router.include_router(
+    arithmetic.router,
+    prefix="/arithmetic",
+    tags=["算术识别"],
 )
 

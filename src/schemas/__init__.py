@@ -4,7 +4,7 @@
 定义 API 请求和响应的数据模型（Schema）。
 """
 
-from src.schemas.request import SliderRequest, RecognitionMethod
+from src.schemas.request import SliderRequest, RecognitionMethod, ArithmeticRequest
 from src.schemas.response import (
     BaseResponse,
     SliderResponse,
@@ -20,6 +20,7 @@ __all__ = [
     # 请求模型
     "SliderRequest",
     "RecognitionMethod",
+    "ArithmeticRequest",
     # 响应模型
     "BaseResponse",
     "SliderResponse",

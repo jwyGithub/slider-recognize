@@ -242,12 +242,18 @@ def create_service_info() -> dict:
                     "method": "POST",
                     "description": "计算滑块距离（支持 URL 和 Base64）",
                 },
+                {
+                    "path": "/api/arithmetic/calc",
+                    "method": "POST",
+                    "description": "识别算术验证码并计算结果",
+                },
             ],
             "features": [
                 "支持 URL 格式图片输入",
                 "支持 Base64 格式图片输入",
                 "支持 OCR 和 OpenCV 两种计算方法",
                 "支持图片尺寸自适应缩放",
+                "支持算术验证码识别与计算",
             ],
         },
         description="服务运行正常",
